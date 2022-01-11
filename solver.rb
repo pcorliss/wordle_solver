@@ -35,8 +35,6 @@ words.each do |word|
 end
 
 word_map_sorted = word_map.sort_by(&:last)
-word_map_sorted << ["audio", 0]
-
 chars = {}
 
 while true do
@@ -70,7 +68,7 @@ while true do
       chars[test_char] = Set.new()
     end
   end
-  puts "Chars: #{chars}"
+  # puts "Chars: #{chars}"
 
   change_count = 1
   i = 0
@@ -97,8 +95,10 @@ while true do
 
   puts "Chars: #{chars}"
 
+  word_count = word_map_sorted.count
+
   word_map_sorted.select! do |word, score|
-    debug = (word == "terns")
+    debug = (word == ".....")
     word_chars = word.chars.to_a
     ok = true
     word_chars.each_with_index do |char, idx|
@@ -115,6 +115,7 @@ while true do
     end
     ok
   end
+  puts "Eliminated #{word_count - word_map_sorted.count} words."
+  puts "#{word_map_sorted.count} words remaining."
   # TODO: Resort based on new score after excluding letters
-  puts "Next Word: #{word_map_sorted.last}"
 end
