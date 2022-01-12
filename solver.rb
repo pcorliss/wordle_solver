@@ -2,7 +2,7 @@
 
 require 'set'
 
-WORDSF = "words_alpha.txt"
+WORDSF = "words_correct.txt"
 LETTERS = 5
 
 unless File.exists?(WORDSF)
@@ -10,34 +10,41 @@ unless File.exists?(WORDSF)
   puts "  Try running: wget 'https://github.com/dwyl/english-words/raw/master/words_alpha.txt'"
   exit 1
 end
-words = File.read('words_alpha.txt').split(/\s+/)
+words = File.read('words_correct.txt').split(/\s+/)
 puts "Loaded #{words.count} words"
 words.select! {|w| w.length == LETTERS }
 puts "  #{words.count} #{LETTERS} letter words"
 
-char_map = Hash.new(0)
-words.each do |word|
-  word.each_char do |char|
-    char_map[char] += 1
-  end
+unless File.exists? 'bad_words.txt'
+  File.open('bad_words.txt', 'wb') {}
 end
+rejects = Set.new(File.read('bad_words.txt').split(/\s+/))
+words.reject! {|w| rejects.include? w }
 
-# char_map.sort_by(&:last).reverse.each do |char, count|
-#   puts "Char: #{char} Count: #{count}"
-# end
-
-word_map = {}
-words.each do |word|
-  score = word.chars.uniq.inject(0) do |sum, char|
-    sum += char_map[char]
-  end
-  word_map[word] = score
+word_map_sorted = {}
+words.each do |w|
+  word_map_sorted[w] = 0
 end
-
-word_map_sorted = word_map.sort_by(&:last)
 chars = {}
 
 while true do
+  # Rescore remaining words by occurences of characters in all words
+  char_map = Hash.new(0)
+  word_map_sorted.each do |word, score|
+    word.each_char do |char|
+      char_map[char] += 1
+    end
+  end
+
+  word_map = {}
+  word_map_sorted.each do |word, score|
+    score = word.chars.uniq.inject(0) do |sum, char|
+      sum += char_map[char]
+    end
+    word_map[word] = score
+  end
+
+  word_map_sorted = word_map.sort_by(&:last)
   test_word = word_map_sorted.last
 
   puts "Submit #{word_map_sorted.last}..."
@@ -45,15 +52,22 @@ while true do
   puts "  Enter e for position match."
   puts "  Enter m for character match."
   puts "  Enter x if the word doesn't exist"
+  puts "  Enter q to quit"
   match = gets.chomp
   # match = "_m__m"
   # match = "_e___"
 
+  return if match == 'q'
+
   if match == "x"
     word_map_sorted.pop
+    File.open('bad_words.txt', 'a') do |fh|
+      fh.puts test_word.first
+    end
     next
   end
 
+  # Set possibilities on each char
   match.chars.each_with_index do |char, idx|
     test_char = test_word.first[idx]
     if char == 'e'
@@ -70,6 +84,7 @@ while true do
   end
   # puts "Chars: #{chars}"
 
+  # Remove possibilites that conflict with other possibilities
   change_count = 1
   i = 0
   exact_arr = []
@@ -97,6 +112,7 @@ while true do
 
   word_count = word_map_sorted.count
 
+  # Filter out words that can no longer match given new conditions
   word_map_sorted.select! do |word, score|
     debug = (word == ".....")
     word_chars = word.chars.to_a
@@ -117,5 +133,4 @@ while true do
   end
   puts "Eliminated #{word_count - word_map_sorted.count} words."
   puts "#{word_map_sorted.count} words remaining."
-  # TODO: Resort based on new score after excluding letters
 end
